@@ -27,10 +27,13 @@ contract('DappTokenSale', function(accounts) {
 
   it('facilitates token buying', function() {
     return DappToken.deployed().then(function(instance) {
+      // Grab token instance first
       tokenInstance = instance;
       return DappTokenSale.deployed();
     }).then(function(instance) {
+      // Then grab token sale instance
       tokenSaleInstance = instance;
+      // Provision 75% of all tokens to the token sale
       return tokenInstance.transfer(tokenSaleInstance.address, tokensAvailable, { from: admin })
     }).then(function(receipt) {
       numberOfTokens = 10;
@@ -49,6 +52,7 @@ contract('DappTokenSale', function(accounts) {
       return tokenInstance.balanceOf(tokenSaleInstance.address);
     }).then(function(balance) {
       assert.equal(balance.toNumber(), tokensAvailable - numberOfTokens);
+      // Try to buy tokens different from the ether value
       return tokenSaleInstance.buyTokens(numberOfTokens, { from: buyer, value: 1 });
     }).then(assert.fail).catch(function(error) {
       assert(error.message.indexOf('revert') >= 0, 'msg.value must equal number of tokens in wei');
@@ -60,21 +64,25 @@ contract('DappTokenSale', function(accounts) {
 
   it('ends token sale', function() {
     return DappToken.deployed().then(function(instance) {
+      // Grab token instance first
       tokenInstance = instance;
       return DappTokenSale.deployed();
     }).then(function(instance) {
+      // Then grab token sale instance
       tokenSaleInstance = instance;
+      // Try to end sale from account other than the admin
       return tokenSaleInstance.endSale({ from: buyer });
     }).then(assert.fail).catch(function(error) {
       assert(error.message.indexOf('revert' >= 0, 'must be admin to end sale'));
+      // End sale as admin
       return tokenSaleInstance.endSale({ from: admin });
     }).then(function(receipt) {
       return tokenInstance.balanceOf(admin);
     }).then(function(balance) {
       assert.equal(balance.toNumber(), 999990, 'returns all unsold dapp tokens to admin');
-      return tokenSaleInstance.tokenPrice();
-    }).then(function(price) {
-      assert.equal(price.toNumber(), 0, 'token price was reset');
+      // Check that the contract has no balance
+      balance = web3.eth.getBalance(tokenSaleInstance.address)
+      assert.equal(balance.toNumber(), 0);
     });
   });
 });
